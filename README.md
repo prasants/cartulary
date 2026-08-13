@@ -55,7 +55,14 @@ Two payload rules make canonicalisation exact by construction:
 
 Verification is mechanical: recompute each hash from the row's own contents
 and its predecessor's hash, and check that `seq` runs 1, 2, 3 … with no gaps.
-A chain that verifies proves no receipt was altered, reordered, or removed.
+
+**What verification proves, exactly.** A chain that verifies proves no
+disclosed receipt was altered, reordered, or removed from the interior of
+the chain. It cannot prove that the chain was not truncated at the tail, or
+that a whole payment's chain was not omitted. Those guarantees require
+anchoring chains to an organisation-level commitment, which is on the
+Cartulary roadmap and will be added to this standard when it ships. A
+standard that overstated its own proofs would fail its own test.
 
 ## Refusal semantics
 
