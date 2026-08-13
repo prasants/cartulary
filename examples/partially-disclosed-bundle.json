@@ -40,11 +40,7 @@
       "seq": 2,
       "event_type": "evaluated",
       "actor": "cartulary:policy",
-      "payload": {
-        "result": "pass",
-        "rules_hash": "9c4f3b9707af0a5ed640754df7ff27c7c7e1371703a52a2ea0684663a0eacdd1",
-        "policy_version": 3
-      },
+      "payload": null,
       "prev_hash": "2cf286335513636e3f6d72542594a253c21aa80302568f00bc239d685a265e50",
       "hash": "ac2efe88dad167e209cfbb883097e14d1054b1d12ef4d7dd926879f6a5930b7b",
       "created_at": "2026-08-13T22:06:36.696Z"
@@ -55,10 +51,7 @@
       "seq": 3,
       "event_type": "screened",
       "actor": "cartulary:screening",
-      "payload": {
-        "result": "clear",
-        "list_version": "OFAC SDN 2026-08-01"
-      },
+      "payload": null,
       "prev_hash": "ac2efe88dad167e209cfbb883097e14d1054b1d12ef4d7dd926879f6a5930b7b",
       "hash": "35c9402865e361cd41781f8ed857b55d200119c2eaa43cb84ee7e3d612ff4c79",
       "created_at": "2026-08-13T22:06:38.696Z"
@@ -69,7 +62,7 @@
       "seq": 4,
       "event_type": "allowed",
       "actor": "cartulary:policy",
-      "payload": {},
+      "payload": null,
       "prev_hash": "35c9402865e361cd41781f8ed857b55d200119c2eaa43cb84ee7e3d612ff4c79",
       "hash": "fd97a4a3b67fd52a7434df6c77dac9cc5c8dcbcf059cc5d97329dfd92e36027e",
       "created_at": "2026-08-13T22:06:39.696Z"

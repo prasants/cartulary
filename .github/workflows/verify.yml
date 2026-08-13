@@ -1,0 +1,20 @@
+name: verify
+on:
+  push:
+  pull_request:
+jobs:
+  vectors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Valid bundle verifies
+        run: node verify.mjs examples/evidence-bundle.json
+      - name: Tampered bundle fails
+        run: "! node verify.mjs examples/tampered-bundle.json"
+      - name: Truncated bundle passes (documented boundary)
+        run: node verify.mjs examples/truncated-bundle.json
+      - name: Partial disclosure verifies by linkage
+        run: node verify.mjs examples/partially-disclosed-bundle.json

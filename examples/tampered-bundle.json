@@ -41,7 +41,7 @@
       "event_type": "evaluated",
       "actor": "cartulary:policy",
       "payload": {
-        "result": "pass",
+        "result": "tampered",
         "rules_hash": "9c4f3b9707af0a5ed640754df7ff27c7c7e1371703a52a2ea0684663a0eacdd1",
         "policy_version": 3
       },
