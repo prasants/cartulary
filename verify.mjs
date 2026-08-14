@@ -58,6 +58,48 @@ let recomputed = 0;
 let linkageOnly = 0;
 const failures = [];
 
+/* An empty chain is not a verified chain. Refuse it rather than print a
+   pass over nothing. */
+if (receipts.length === 0) {
+  console.error("FAIL: the bundle contains no receipts. An empty chain proves nothing.");
+  process.exit(1);
+}
+
+/* Every receipt must belong to the same payment, and to the payment the
+   bundle says it describes. Splicing two chains together is a failure. */
+const declaredId = bundle.payment?.id ?? receipts[0].payment_id;
+const declaredEnv = bundle.payment?.env ?? receipts[0].env;
+for (const r of receipts) {
+  if (r.payment_id !== declaredId) {
+    failures.push(`seq ${r.seq}: belongs to payment ${r.payment_id}, not ${declaredId}`);
+  }
+  if (r.env !== declaredEnv) {
+    failures.push(`seq ${r.seq}: environment ${r.env} does not match the bundle's ${declaredEnv}`);
+  }
+}
+
+/* The human-readable header is not hashed; it is only trustworthy insofar
+   as it agrees with the values the first receipt binds. Compare them, so a
+   bundle cannot read as one amount and prove another. */
+const opening = receipts.find((r) => r.seq === 1)?.payload;
+if (opening && bundle.payment) {
+  /* Only fields the header and the opening receipt state identically are
+     compared. The header's instrument is a display name ("USDC (Base)")
+     where the receipt binds an identifier ("usdc-base"); comparing those
+     would report a forgery where there is only a label. */
+  const compared = {
+    amount: [bundle.payment.amount, opening.amount],
+    currency: [bundle.payment.currency, opening.currency],
+    counterparty: [bundle.payment.counterparty, opening.counterparty],
+    reference: [bundle.payment.reference, opening.external_ref],
+  };
+  for (const [field, [claimed, bound]] of Object.entries(compared)) {
+    if (claimed !== undefined && bound !== undefined && String(claimed) !== String(bound)) {
+      failures.push(`header ${field} "${claimed}" contradicts the hashed value "${bound}"`);
+    }
+  }
+}
+
 for (const r of receipts) {
   if (r.seq !== prevSeq + 1) failures.push(`seq ${r.seq}: sequence gap after ${prevSeq}`);
   if (r.prev_hash !== prev) failures.push(`seq ${r.seq}: prev_hash does not match preceding hash`);
