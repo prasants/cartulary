@@ -17,7 +17,7 @@ changes until 1.0.
 
 ## The SDK
 
-[`sdk/`](sdk/) holds `@cartulary/agent`, the TypeScript SDK that produces these
+[`sdk/`](sdk/) holds `cartulary`, the TypeScript SDK that produces these
 receipt chains from the paying side: one call decides a payment against the
 agent's mandate and its organisation's signed policy, signs the issued
 template with a key Cartulary never sees, and waits for the settled receipt.

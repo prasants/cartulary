@@ -12,7 +12,7 @@
   Run: KMS_KEY_ID=arn:aws:kms:… node examples/aws-kms-signer.mjs
 */
 import { KMSClient, GetPublicKeyCommand, SignCommand } from "@aws-sdk/client-kms";
-import { verifySigner, checksumAddress } from "@cartulary/agent";
+import { verifySigner, checksumAddress } from "cartulary";
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";

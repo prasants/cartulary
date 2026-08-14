@@ -1,6 +1,6 @@
 /* The whole loop: decide, sign, submit, settle, receipted at every step.
    Run: CARTULARY_KEY=ck_live_… node examples/pay.mjs */
-import { Cartulary, RefusedError } from "@cartulary/agent";
+import { Cartulary, RefusedError } from "cartulary";
 
 const agent = new Cartulary({ apiKey: process.env.CARTULARY_KEY, agent: "procurement" });
 

@@ -1,9 +1,9 @@
-# @cartulary/agent
+# cartulary (SDK)
 
 Pay under governance. Five lines that pay:
 
 ```js
-import { Cartulary } from "@cartulary/agent";
+import { Cartulary } from "cartulary";
 
 const agent = new Cartulary({ apiKey: process.env.CARTULARY_KEY, agent: "procurement" });
 const paid = await agent.pay({ to: "0x1F98431c8aD98523631AE4a59f267346ea31F984", amount: "1.50" });
@@ -56,7 +56,7 @@ Since 0.2.0 the unhappy paths heal themselves, and every recovery is receipted:
 Implement `Signer` (two methods: `address()`, `sign(hash)`) over a KMS, an HSM, or an MPC service, and prove it before trusting it:
 
 ```js
-import { verifySigner } from "@cartulary/agent";
+import { verifySigner } from "cartulary";
 await verifySigner(mySigner); // throws unless signatures recover to address(), 65 bytes, low-s
 ```
 
