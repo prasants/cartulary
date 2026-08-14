@@ -35,6 +35,18 @@ import { verifyTemplate, templateHash } from "cartulary";
 - It cannot pay outside the mandate. Cartulary refuses such a payment before construction, and the refusal throws a `RefusedError` naming the rule and is itself receipted.
 - It cannot rebind a wallet. Binding is write-once; a stolen API key cannot redirect funds to a new key. Rebinding is a governed console action.
 
+## Where this stops
+
+The SDK refuses to sign a transaction that disagrees with the payment you
+asked for, and Cartulary refuses a payment that breaches its mandate before
+any transaction is constructed. Neither makes the decision and the
+settlement one atomic step: the approval is checked against the prepared
+transaction before signing and reconciled against the chain afterwards, so
+settlement can succeed while a receipt write fails. Nothing here can freeze
+an issued token or reach a transfer that never passed through Cartulary.
+The full boundary is at
+[cartulary.xyz/architecture](https://www.cartulary.xyz/architecture).
+
 ## First run
 
 The default signer generates a secp256k1 key at `./.cartulary/<agent>.key` (mode 600, gitignored), binds its address to the agent, and prints funding instructions once. Production agents should pass their own `signer` (two methods: `address()`, `sign(hash)`) backed by a KMS, an HSM, or an MPC service.

@@ -123,9 +123,10 @@ should be `base64`.
 It runs against a local network, so it demonstrates the mechanism and not
 throughput, operations, or anything about a shared environment. The
 instrument is the Iou template from Canton's own examples, which is a
-payment in shape but is not a stablecoin issuer's model. Nothing here has
-been run against DevNet or TestNet, which needs a participant willing to
-sponsor access.
+payment in shape but is not a stablecoin issuer's model. It is not
+integrated into the hosted application at cartulary.xyz, and nothing here
+has been run on DevNet, TestNet, or MainNet, which needs a participant
+willing to sponsor access.
 
 The equivalent for an EVM chain, with the same obligation and the same
 adversarial tests, is in [`sdk/src/transaction.ts`](../sdk/src/transaction.ts).

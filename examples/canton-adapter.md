@@ -1,9 +1,12 @@
 # Binding a decision to a Canton transaction
 
-A worked sketch of the adapter described in the standard, written against a
-local network so that nobody has to grant anything to try it. It is a
-specification with test vectors, not a running integration: no part of this
-has been executed against a shared network, and the roadmap says so.
+The reasoning behind the adapter described in the standard, written against
+a local network so that nobody has to grant anything to try it. The adapter
+itself has been implemented and run: the code and its recorded run are in
+[`canton/`](../canton/). What has not happened is a run on a shared network.
+This is Canton's example Iou model, so it is a payment in shape and not a
+stablecoin settlement, and it is not integrated into the hosted application
+at cartulary.xyz.
 
 ## Why the shape differs from an EVM rail
 

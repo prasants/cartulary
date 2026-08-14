@@ -107,6 +107,26 @@ the design and are stated rather than hidden:
 
 A standard that overstated its own proofs would fail its own test.
 
+## Where a receipt chain stops
+
+A receipt records what a control plane decided. Two boundaries follow from
+that, and they belong here rather than only in a product's marketing:
+
+1. **The decision and the settlement are not one state transition.** An
+   approval is validated against the prepared transaction before signing and
+   reconciled against the ledger afterwards. Settlement can succeed while
+   the receipt write fails, leaving the account of it briefly incomplete and
+   repaired by observing the ledger. That is recovery, not a guarantee.
+2. **A signature commits to the transaction, not to the authority behind
+   it.** Unless a commitment to the mandate, the policy version, and the
+   decision is carried inside the transaction, the binding between them is
+   an assertion held by whoever kept the records. Carrying that commitment
+   is the next item in this standard.
+
+The implementation's own version of this argument, including why a central
+multi-tenant service is the wrong long-term shape for it, is at
+[cartulary.xyz/architecture](https://www.cartulary.xyz/architecture).
+
 ## Refusal semantics
 
 A payment that violates its mandate or policy is refused before construction:
@@ -123,18 +143,20 @@ receipt, and a verification block recomputed at export time. Schema name:
 
 ## Binding a decision to a ledger transaction
 
-[`canton/`](canton/) holds the adapter, run against a local Canton network:
-a payment prepared by a participant, decoded and checked against the
-approved intent, its hash recomputed independently, refused when any of it
-disagrees, and signed only when it all does. The recorded run includes three
-tampered transactions whose hashes were recomputed to stay internally
-consistent, so that they can only be caught by comparison with the approval.
+[`canton/`](canton/) holds a narrow external-signing validator, run against
+a local Canton network using Canton's example Iou model: a transaction
+prepared by a participant, decoded and checked against the approved intent,
+its hash recomputed independently, refused when any of it disagrees, and
+signed only when it all does. The recorded run includes three tampered
+transactions whose hashes were recomputed to stay internally consistent, so
+that they can only be caught by comparison with the approval.
 [`examples/canton-adapter.md`](examples/canton-adapter.md) sets out the
 reasoning: the two gates, and what each half of the system can and cannot
 prove alone.
 
-Nothing here has been run against DevNet or TestNet, which needs a
-participant to sponsor access.
+It is not a stablecoin settlement, it is not integrated into the hosted
+application at cartulary.xyz, and it has not been run on DevNet, TestNet, or
+MainNet, which needs a participant to sponsor access.
 
 The EVM implementation of the same gate-two obligation is real and tested:
 [`sdk/src/transaction.ts`](sdk/src/transaction.ts) decodes the prepared
@@ -144,8 +166,11 @@ before signing.
 ## Planned for later drafts
 
 Machine-readable JSON Schemas for receipts, bundles, and per-event payloads;
-organisation-level anchoring; and the Canton adapter above, executed rather
-than specified.
+organisation-level anchoring; a commitment to the mandate, policy version,
+and decision carried inside the transaction, so that the binding between
+authority and execution is checkable by a counterparty rather than asserted
+by a service; and the Canton adapter above, run against a shared network
+rather than a local one.
 
 ## Licence
 
