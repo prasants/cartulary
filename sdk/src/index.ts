@@ -1,5 +1,5 @@
 export { Cartulary } from "./client.js";
-export { FileSigner, checksumAddress, type Signer } from "./signer.js";
+export { FileSigner, checksumAddress, verifySigner, type Signer } from "./signer.js";
 export {
   CartularyError,
   AuthError,

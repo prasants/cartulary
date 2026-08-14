@@ -182,10 +182,58 @@ export class Cartulary {
     return this.request("GET", `/api/v1/payments/${id}`);
   }
 
-  private async waitForSettlement(id: string, evidence: string, timeoutMs: number): Promise<SettledResult> {
+  /* Sign an issued template and submit the signature. A "superseded"
+     response means an earlier bid for the same payment mined first; that is
+     a settlement in progress, not a failure. */
+  private async submitSignature(
+    id: string,
+    signing: { template_hash?: `0x${string}`; submit?: string }
+  ): Promise<{ txHash: string; explorer: string }> {
+    if (!this.signer) throw new ApiError(400, "A signer is required in the live environment.");
+    const signature = await this.signer.sign(signing.template_hash!);
+    const s = await this.request<{ status?: string; tx_hash: string; explorer: string }>(
+      "POST",
+      new URL(signing.submit!).pathname,
+      { signature }
+    );
+    if (s.status === "superseded" && !this.quiet) {
+      console.log(`cartulary: an earlier bid for ${id} mined first; awaiting its settled receipt`);
+    }
+    return { txHash: s.tx_hash, explorer: s.explorer };
+  }
+
+  /* Ask for a higher bid on a stale submission. Declined bumps (too early,
+     attempts exhausted, already mined) are not errors; the wait continues. */
+  private async tryBump(id: string): Promise<void> {
+    let b: { status: string; attempt?: number; template_hash?: `0x${string}`; submit?: string };
+    try {
+      b = await this.request("POST", `/api/v1/payments/${id}/bump`);
+    } catch {
+      return;
+    }
+    if (b.status !== "ready") return;
+    if (!this.quiet) console.log(`cartulary: fee bump for ${id}, attempt ${b.attempt}; re-signing the same payment at a higher bid`);
+    try {
+      await this.submitSignature(id, b);
+    } catch {
+      /* The race resolved against the bump; the sweep settles the winner. */
+    }
+  }
+
+  private async waitForSettlement(
+    id: string,
+    evidence: string,
+    timeoutMs: number,
+    bumpAfterMs = 60_000
+  ): Promise<SettledResult> {
     const deadline = Date.now() + timeoutMs;
+    let staleSince = Date.now();
     for (;;) {
       const s = await this.paymentState(id);
+      if (s.submission?.status === "submitted" && Date.now() - staleSince > bumpAfterMs) {
+        await this.tryBump(id);
+        staleSince = Date.now();
+      }
       if (s.payment.state === "settled") {
         const settled = s.receipts.find((r) => r.event_type === "settled");
         const payload = (settled?.payload ?? {}) as { tx_hash?: string; explorer?: string };
@@ -228,14 +276,15 @@ export class Cartulary {
     if (wantsRail) await this.ensureBound();
 
     const idempotencyKey = input.idempotencyKey ?? randomUUID();
-    const d = await this.request<DecisionResponse>("POST", "/api/v1/decisions", {
+    const decisionBody = {
       amount,
       currency: input.currency ?? "USD",
       instrument,
       agent: this.agentName,
       counterparty: to,
       idempotency_key: idempotencyKey,
-    });
+    };
+    const d = await this.request<DecisionResponse>("POST", "/api/v1/decisions", decisionBody);
     const evidence = d.links.evidence;
     const id = d.payment.id;
 
@@ -295,13 +344,27 @@ export class Cartulary {
       return wait ? this.waitForSettlement(id, evidence, timeoutMs) : submitted;
     }
 
-    if (!this.signer) throw new ApiError(400, "A signer is required in the live environment.");
-    const signature = await this.signer.sign(signing.template_hash!);
-    const submitPath = new URL(signing.submit!).pathname;
-    const s = await this.request<{ tx_hash: string; explorer: string }>("POST", submitPath, { signature });
+    let sub: { txHash: string; explorer: string };
+    try {
+      sub = await this.submitSignature(id, signing);
+    } catch (err) {
+      if (!(err instanceof TemplateExpiredError)) throw err;
+      /* Self-heal: the same idempotency key replays the same payment, and
+         the server reissues a fresh template for it, receipted as a further
+         prepared attempt. A second payment cannot exist. */
+      if (!this.quiet) console.log(`cartulary: the template for ${id} expired; reissuing for the same payment`);
+      const d2 = await this.request<DecisionResponse>("POST", "/api/v1/decisions", decisionBody);
+      if (d2.signing?.status !== "ready") {
+        throw new SettlementUnavailableError(
+          d2.signing?.reason ?? "The template could not be reissued; decide afresh.",
+          id
+        );
+      }
+      sub = await this.submitSignature(id, d2.signing);
+    }
 
-    if (!wait) return this.asSubmitted(id, evidence, s.tx_hash, s.explorer, d.replayed);
-    return this.waitForSettlement(id, evidence, timeoutMs);
+    if (!wait) return this.asSubmitted(id, evidence, sub.txHash, sub.explorer, d.replayed);
+    return this.waitForSettlement(id, evidence, timeoutMs, input.bumpAfterMs);
   }
 
   private asSubmitted(id: string, evidence: string, txHash: string, explorer: string, replayed?: boolean) {

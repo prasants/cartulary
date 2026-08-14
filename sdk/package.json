@@ -1,6 +1,6 @@
 {
   "name": "@cartulary/agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pay under governance. The Cartulary SDK for software agents: decide, sign, settle, with a receipt chain you can verify yourself.",
   "license": "Apache-2.0",
   "homepage": "https://www.cartulary.xyz",

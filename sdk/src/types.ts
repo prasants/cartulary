@@ -28,6 +28,8 @@ export interface PayInput {
   wait?: boolean;
   /** How long to wait for settlement before returning the submitted state. Default 120000. */
   timeoutMs?: number;
+  /** While waiting, ask for a fee bump if the transaction sits unmined this long. Default 60000. The server declines bumps that are too early, exhausted, or already mined. */
+  bumpAfterMs?: number;
 }
 
 export interface Receipt {

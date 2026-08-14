@@ -34,6 +34,36 @@ function addressOf(privateKey: Uint8Array): string {
   return checksumAddress("0x" + addr);
 }
 
+/*
+  Conformance check for signer implementations. Signs a random hash and
+  verifies the signature recovers to the signer's own address, is exactly 65
+  bytes, and is low-s normalised, which the rail requires. Run this against
+  any KMS, HSM, or MPC signer before trusting it with a payment.
+*/
+export async function verifySigner(signer: Signer): Promise<{ address: string }> {
+  const hash = ("0x" + bytesToHex(randomBytes(32))) as `0x${string}`;
+  const sig = await signer.sign(hash);
+  if (!/^0x[0-9a-fA-F]{130}$/.test(sig)) {
+    throw new Error("The signature must be 65 bytes hex: r (32) + s (32) + recovery (1).");
+  }
+  const vByte = parseInt(sig.slice(130, 132), 16);
+  const recovery = vByte >= 27 ? vByte - 27 : vByte;
+  if (recovery !== 0 && recovery !== 1) {
+    throw new Error(`The recovery byte is ${vByte}; it must be 0, 1, 27, or 28.`);
+  }
+  const parsed = secp256k1.Signature.fromCompact(sig.slice(2, 130)).addRecoveryBit(recovery);
+  if (parsed.hasHighS()) {
+    throw new Error("s is not low-s normalised; the rail rejects malleable signatures.");
+  }
+  const pub = parsed.recoverPublicKey(hexToBytes(hash.slice(2))).toRawBytes(false);
+  const recovered = checksumAddress("0x" + bytesToHex(keccak_256(pub.slice(1)).slice(-20)));
+  const claimed = await signer.address();
+  if (recovered.toLowerCase() !== claimed.toLowerCase()) {
+    throw new Error(`The signature recovers to ${recovered}, but address() returns ${claimed}.`);
+  }
+  return { address: recovered };
+}
+
 export class FileSigner implements Signer {
   private readonly key: Uint8Array;
   readonly path: string;

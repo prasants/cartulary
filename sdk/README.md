@@ -43,6 +43,25 @@ Every `pay()` carries an idempotency key (yours, or a generated one). A retried 
 await agent.pay({ to, amount: "9.99", idempotencyKey: `invoice-2214` });
 ```
 
+## When the chain misbehaves
+
+Since 0.2.0 the unhappy paths heal themselves, and every recovery is receipted:
+
+- **Expired template.** A template that dies unused (a paused process, a redeploy) is reissued for the same payment on the same idempotency key: fresh nonce and fees, recipient and amount immutable, receipted as a further `prepared` attempt. The SDK does this automatically on a 410.
+- **Stuck transaction.** While waiting, the SDK asks for a fee bump if the transaction sits unmined past `bumpAfterMs` (default 60s). A bump is byte-identical except for its fees, same nonce, same calldata, so it can never move more money or move it elsewhere. Three bids, then a human looks. If the original mines first, the losing bid resolves as `superseded`, never as a false failure.
+- **Reorganisation.** Settled is written at depth 2 and watched to depth 12. A block move appends a `reorg_observed` receipt to the chain; nothing is ever rewritten.
+
+## Bring your own signer
+
+Implement `Signer` (two methods: `address()`, `sign(hash)`) over a KMS, an HSM, or an MPC service, and prove it before trusting it:
+
+```js
+import { verifySigner } from "@cartulary/agent";
+await verifySigner(mySigner); // throws unless signatures recover to address(), 65 bytes, low-s
+```
+
+A reference AWS KMS implementation lives at [`examples/aws-kms-signer.mjs`](../examples/aws-kms-signer.mjs).
+
 ## Sandbox
 
 A `ck_test_…` key runs the same call against the simulated environment: real decisions, real receipt chains, no wallet and no chain. The published test key is `ck_test_bishopsgate`.
