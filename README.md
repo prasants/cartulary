@@ -123,14 +123,18 @@ receipt, and a verification block recomputed at export time. Schema name:
 
 ## Binding a decision to a ledger transaction
 
-[`examples/canton-adapter.md`](examples/canton-adapter.md) works through the
-adapter for a ledger that prepares transactions on the participant side and
-returns a hash for external signing: the two gates, what each half of the
-system can and cannot prove, and the receipts a Canton payment would carry.
-It is a specification with worked payloads, written against a local network
-so that nobody has to grant access to try it. Nothing in it has been run
-against a shared network, and it is marked Next rather than Built for that
-reason.
+[`canton/`](canton/) holds the adapter, run against a local Canton network:
+a payment prepared by a participant, decoded and checked against the
+approved intent, its hash recomputed independently, refused when any of it
+disagrees, and signed only when it all does. The recorded run includes three
+tampered transactions whose hashes were recomputed to stay internally
+consistent, so that they can only be caught by comparison with the approval.
+[`examples/canton-adapter.md`](examples/canton-adapter.md) sets out the
+reasoning: the two gates, and what each half of the system can and cannot
+prove alone.
+
+Nothing here has been run against DevNet or TestNet, which needs a
+participant to sponsor access.
 
 The EVM implementation of the same gate-two obligation is real and tested:
 [`sdk/src/transaction.ts`](sdk/src/transaction.ts) decodes the prepared
