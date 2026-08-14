@@ -121,12 +121,27 @@ system: the payment summary, its full chain with every hashed field on every
 receipt, and a verification block recomputed at export time. Schema name:
 `cartulary/evidence-bundle/0.1`.
 
+## Binding a decision to a ledger transaction
+
+[`examples/canton-adapter.md`](examples/canton-adapter.md) works through the
+adapter for a ledger that prepares transactions on the participant side and
+returns a hash for external signing: the two gates, what each half of the
+system can and cannot prove, and the receipts a Canton payment would carry.
+It is a specification with worked payloads, written against a local network
+so that nobody has to grant access to try it. Nothing in it has been run
+against a shared network, and it is marked Next rather than Built for that
+reason.
+
+The EVM implementation of the same gate-two obligation is real and tested:
+[`sdk/src/transaction.ts`](sdk/src/transaction.ts) decodes the prepared
+transaction, checks it against the approved intent, and recomputes its hash
+before signing.
+
 ## Planned for later drafts
 
 Machine-readable JSON Schemas for receipts, bundles, and per-event payloads;
-organisation-level anchoring; and a worked ledger example binding an approved
-intent to a prepared, externally signed Canton transaction and its resulting
-update identifier.
+organisation-level anchoring; and the Canton adapter above, executed rather
+than specified.
 
 ## Licence
 
