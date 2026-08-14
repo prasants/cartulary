@@ -1,6 +1,16 @@
 export { Cartulary } from "./client.js";
 export { FileSigner, checksumAddress, verifySigner, type Signer } from "./signer.js";
 export {
+  verifyTemplate,
+  verifyReplacement,
+  templateHash,
+  TransactionRejected,
+  CHAINS,
+  type RailTemplate,
+  type Intent,
+  type Decoded,
+} from "./transaction.js";
+export {
   CartularyError,
   AuthError,
   RateLimitError,

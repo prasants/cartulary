@@ -11,6 +11,13 @@ import {
   TemplateExpiredError,
   VerificationError,
 } from "./errors.js";
+import {
+  verifyTemplate,
+  verifyReplacement,
+  TransactionRejected,
+  type RailTemplate,
+  type Intent,
+} from "./transaction.js";
 import type {
   CartularyOptions,
   HeldResult,
@@ -62,6 +69,7 @@ interface DecisionResponse {
   receipts: Receipt[];
   signing: {
     status: "ready" | "unavailable" | "submitted" | "confirmed";
+    template?: RailTemplate;
     template_hash?: `0x${string}`;
     submit?: string;
     expires_at?: string;
@@ -184,12 +192,31 @@ export class Cartulary {
 
   /* Sign an issued template and submit the signature. A "superseded"
      response means an earlier bid for the same payment mined first; that is
-     a settlement in progress, not a failure. */
+     a settlement in progress, not a failure.
+
+     Nothing is signed before the prepared transaction has been decoded and
+     checked against the payment the caller asked for, and its hash
+     recomputed here. The server proposes; the agent verifies. */
   private async submitSignature(
     id: string,
-    signing: { template_hash?: `0x${string}`; submit?: string }
+    signing: { template?: RailTemplate; template_hash?: `0x${string}`; submit?: string },
+    intent: Intent,
+    previous?: RailTemplate
   ): Promise<{ txHash: string; explorer: string }> {
     if (!this.signer) throw new ApiError(400, "A signer is required in the live environment.");
+    if (!signing.template) {
+      throw new TransactionRejected(
+        "The server did not supply the unsigned transaction; this SDK will not sign a bare hash.",
+        ["no template was returned alongside template_hash"]
+      );
+    }
+    const decoded = verifyTemplate(signing.template, signing.template_hash!, intent);
+    if (previous) verifyReplacement(previous, signing.template);
+    if (!this.quiet) {
+      console.log(
+        `cartulary: verified before signing — ${decoded.amount} to ${decoded.recipient} via ${decoded.token} on ${decoded.chain} (nonce ${decoded.nonce})`
+      );
+    }
     const signature = await this.signer.sign(signing.template_hash!);
     const s = await this.request<{ status?: string; tx_hash: string; explorer: string }>(
       "POST",
@@ -204,8 +231,8 @@ export class Cartulary {
 
   /* Ask for a higher bid on a stale submission. Declined bumps (too early,
      attempts exhausted, already mined) are not errors; the wait continues. */
-  private async tryBump(id: string): Promise<void> {
-    let b: { status: string; attempt?: number; template_hash?: `0x${string}`; submit?: string };
+  private async tryBump(id: string, intent: Intent, previous: RailTemplate): Promise<void> {
+    let b: { status: string; attempt?: number; template?: RailTemplate; template_hash?: `0x${string}`; submit?: string };
     try {
       b = await this.request("POST", `/api/v1/payments/${id}/bump`);
     } catch {
@@ -214,7 +241,7 @@ export class Cartulary {
     if (b.status !== "ready") return;
     if (!this.quiet) console.log(`cartulary: fee bump for ${id}, attempt ${b.attempt}; re-signing the same payment at a higher bid`);
     try {
-      await this.submitSignature(id, b);
+      await this.submitSignature(id, b, intent, previous);
     } catch {
       /* The race resolved against the bump; the sweep settles the winner. */
     }
@@ -224,14 +251,15 @@ export class Cartulary {
     id: string,
     evidence: string,
     timeoutMs: number,
-    bumpAfterMs = 60_000
+    bumpAfterMs = 60_000,
+    bumpContext?: { intent: Intent; template: RailTemplate }
   ): Promise<SettledResult> {
     const deadline = Date.now() + timeoutMs;
     let staleSince = Date.now();
     for (;;) {
       const s = await this.paymentState(id);
-      if (s.submission?.status === "submitted" && Date.now() - staleSince > bumpAfterMs) {
-        await this.tryBump(id);
+      if (bumpContext && s.submission?.status === "submitted" && Date.now() - staleSince > bumpAfterMs) {
+        await this.tryBump(id, bumpContext.intent, bumpContext.template);
         staleSince = Date.now();
       }
       if (s.payment.state === "settled") {
@@ -344,9 +372,13 @@ export class Cartulary {
       return wait ? this.waitForSettlement(id, evidence, timeoutMs) : submitted;
     }
 
+    /* What the caller actually asked for. Every prepared transaction is
+       checked against this before the key is used. */
+    const intent: Intent = { recipient: to.address!, amount };
+
     let sub: { txHash: string; explorer: string };
     try {
-      sub = await this.submitSignature(id, signing);
+      sub = await this.submitSignature(id, signing, intent);
     } catch (err) {
       if (!(err instanceof TemplateExpiredError)) throw err;
       /* Self-heal: the same idempotency key replays the same payment, and
@@ -360,11 +392,15 @@ export class Cartulary {
           id
         );
       }
-      sub = await this.submitSignature(id, d2.signing);
+      sub = await this.submitSignature(id, d2.signing, intent);
+      signing.template = d2.signing.template;
     }
 
     if (!wait) return this.asSubmitted(id, evidence, sub.txHash, sub.explorer, d.replayed);
-    return this.waitForSettlement(id, evidence, timeoutMs, input.bumpAfterMs);
+    return this.waitForSettlement(id, evidence, timeoutMs, input.bumpAfterMs, {
+      intent,
+      template: signing.template!,
+    });
   }
 
   private asSubmitted(id: string, evidence: string, txHash: string, explorer: string, replayed?: boolean) {
@@ -383,5 +419,27 @@ export class Cartulary {
   /** Fetch any payment's state and receipt chain by id. */
   async payment(id: string) {
     return this.paymentState(id);
+  }
+
+  /*
+    The complete evidence bundle for a payment: every receipt with every
+    field its hash binds, so it can be recomputed by the published verifier
+    without asking Cartulary what it contains. Write it to a file and run
+    `node verify.mjs bundle.json`.
+  */
+  async evidenceBundle(id: string): Promise<{
+    payment: Record<string, unknown>;
+    receipts: Receipt[];
+    verification: { method: string; verifier: string };
+  }> {
+    const s = await this.paymentState(id);
+    return {
+      payment: { id, ...(s.payment as Record<string, unknown>) },
+      receipts: s.receipts,
+      verification: {
+        method: "SHA-256 over RFC 8785 canonical JSON of {actor, env, event_type, payload, payment_id, prev_hash, seq}",
+        verifier: "https://github.com/prasants/cartulary/blob/main/verify.mjs",
+      },
+    };
   }
 }

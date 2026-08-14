@@ -12,10 +12,27 @@ console.log(paid.status, paid.txHash, paid.evidence);
 
 Behind that call: Cartulary evaluates the payment against the agent's mandate and the organisation's signed policy, returns the unsigned transaction as a template, the SDK signs its hash with a key Cartulary never sees, the server verifies the signature recovers to the agent's bound wallet, relays it, and writes a hash-chained receipt for every step. `paid.evidence` is the payment's evidence page in the console: your organisation's members see it after signing in, and the exported bundle verifies with the dependency-free verifier in this repository. Simulated payments' evidence pages are public.
 
+## It verifies before it signs
+
+The server prepares the transaction, but the agent does not take its word for what those bytes do. Before the key is ever used, the SDK decodes the prepared transaction and checks it against the payment you asked for:
+
+- the chain is one it knows, and the token contract is that chain's USDC, compared against a table compiled into the SDK rather than anything the server said;
+- the calldata is a plain ERC-20 transfer, to the address you named, for the amount you named, to the base unit;
+- the transaction sends no native currency of its own;
+- the hash you are asked to sign is recomputed from those bytes and must match.
+
+A replacement (fee bump) is held to a stricter rule: chain, nonce, destination, value, and calldata must be byte-identical, and only the fees may rise. Any disagreement throws `TransactionRejected` listing every failed check, and nothing is signed. This is the same discipline the [standard](https://www.cartulary.xyz/standard) asks of any adapter: inspect the prepared transaction, match it to the approved intent, recompute its hash, and only then sign.
+
+The checks are exported, so you can run them yourself:
+
+```js
+import { verifyTemplate, templateHash } from "cartulary";
+```
+
 ## What it does not do
 
-- It holds no RPC endpoint, no gas logic, and no chain state; the server supplies everything except the signature.
-- It cannot pay outside the mandate. A refusal throws a `RefusedError` naming the rule, and the refusal itself is receipted.
+- It holds no RPC endpoint, no gas logic, and no chain state; the server supplies everything except the signature. It does check what the server supplies (above).
+- It cannot pay outside the mandate. Cartulary refuses such a payment before construction, and the refusal throws a `RefusedError` naming the rule and is itself receipted.
 - It cannot rebind a wallet. Binding is write-once; a stolen API key cannot redirect funds to a new key. Rebinding is a governed console action.
 
 ## First run
@@ -28,7 +45,7 @@ The default signer generates a secp256k1 key at `./.cartulary/<agent>.key` (mode
 
 | status | meaning |
 | --- | --- |
-| `settled` | The settled receipt is written; `txHash`, `explorer`, and the full receipt chain are attached. |
+| `settled` | The settled receipt is written; `txHash`, `explorer`, and the receipt chain are attached. For a chain the published verifier can recompute, call `evidenceBundle(id)`. |
 | `submitted` | On chain, awaiting confirmation (`wait: false`); call `.wait()` to poll. |
 | `held` | Above the escalation threshold; a human decides in the console. `.wait()` polls the outcome. |
 | `simulated` | The sandbox settled it; no chain involved. |

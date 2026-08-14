@@ -25,6 +25,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Build @cartulary/agent
+      - name: Install (locked)
         working-directory: sdk
-        run: npm install && npm run build && npm pack
+        run: npm ci
+      - name: Build the package
+        working-directory: sdk
+        run: npm run build
+      - name: Behavioural tests
+        working-directory: sdk
+        run: npm test
+      - name: Package
+        working-directory: sdk
+        run: npm pack
