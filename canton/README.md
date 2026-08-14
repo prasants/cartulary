@@ -1,6 +1,8 @@
 # The Canton adapter
 
-Gate two, implemented against a Canton participant and run.
+Gate two, implemented against a Canton participant and run. This is an
+external-signing and transaction-validation experiment on a local network,
+not a stablecoin integration.
 
 Canton prepares transactions on the participant side and returns a hash for
 an external party to sign. The signature commits to the prepared transaction
@@ -62,8 +64,21 @@ ed25519 key, paying an Iou to a supplier party:
 All checks passed.
 ```
 
-The contract then appears in the active contract set of both parties, which
-is the point: the payment settled, and it settled because it matched.
+The contract then appears in the active contract set of both parties.
+
+What that establishes, precisely: a transaction was prepared by a
+participant, decoded, compared against an approval held outside the ledger,
+refused in three altered forms, signed by a key the ledger recognises, and
+committed, with the resulting contract disclosed to exactly the parties
+entitled to see it.
+
+What it does not establish: the settlement of a stablecoin payment. The Iou
+is Canton's own example template. It is a payment in shape, carrying parties,
+an amount, and a currency, and it is not an issued stablecoin. Nothing here
+demonstrates minting, burning, freezing, reserve backing, redemption rights,
+final legal title to money, or atomic composition with another asset. Those
+are the things that would make it a payment rather than a contract that looks
+like one, and none of them are in scope for this experiment.
 
 The three tampering cases in step 3 recompute the hash after altering the
 transaction, so each one is internally consistent. That is the case worth
