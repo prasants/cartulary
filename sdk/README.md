@@ -10,7 +10,7 @@ const paid = await agent.pay({ to: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
 console.log(paid.status, paid.txHash, paid.evidence);
 ```
 
-Behind that call: Cartulary evaluates the payment against the agent's mandate and the organisation's signed policy, returns the unsigned transaction as a template, the SDK signs its hash with a key Cartulary never sees, the server verifies the signature recovers to the agent's bound wallet, relays it, and writes a hash-chained receipt for every step. `paid.evidence` is the public page where anyone can verify the chain.
+Behind that call: Cartulary evaluates the payment against the agent's mandate and the organisation's signed policy, returns the unsigned transaction as a template, the SDK signs its hash with a key Cartulary never sees, the server verifies the signature recovers to the agent's bound wallet, relays it, and writes a hash-chained receipt for every step. `paid.evidence` is the payment's evidence page in the console: your organisation's members see it after signing in, and the exported bundle verifies with the dependency-free verifier in this repository. Simulated payments' evidence pages are public.
 
 ## What it does not do
 

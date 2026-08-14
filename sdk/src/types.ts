@@ -42,7 +42,7 @@ export interface Receipt {
 interface PayBase {
   /** The payment's id at Cartulary. */
   id: string;
-  /** The public evidence page for this payment's receipt chain. */
+  /** The evidence page for this payment's receipt chain. Live pages are visible to your organisation's members; simulated pages are public. */
   evidence: string;
   /** True when an idempotency key replayed an earlier decision instead of creating a payment. */
   replayed?: boolean;
