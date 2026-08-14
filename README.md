@@ -15,6 +15,15 @@ exported bundles conform to this document, and the example bundle in this
 repository verifies with the verifier in this repository. Expect breaking
 changes until 1.0.
 
+## The SDK
+
+[`sdk/`](sdk/) holds `@cartulary/agent`, the TypeScript SDK that produces these
+receipt chains from the paying side: one call decides a payment against the
+agent's mandate and its organisation's signed policy, signs the issued
+template with a key Cartulary never sees, and waits for the settled receipt.
+Two dependencies, no RPC. Its README documents the result and error model;
+[`examples/pay.mjs`](examples/pay.mjs) is a runnable example.
+
 ## Verify the example yourself
 
 ```

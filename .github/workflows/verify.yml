@@ -18,3 +18,13 @@ jobs:
         run: node verify.mjs examples/truncated-bundle.json
       - name: Partial disclosure verifies by linkage
         run: node verify.mjs examples/partially-disclosed-bundle.json
+  sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build @cartulary/agent
+        working-directory: sdk
+        run: npm install && npm run build && npm pack

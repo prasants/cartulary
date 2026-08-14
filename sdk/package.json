@@ -1,0 +1,51 @@
+{
+  "name": "@cartulary/agent",
+  "version": "0.1.0",
+  "description": "Pay under governance. The Cartulary SDK for software agents: decide, sign, settle, with a receipt chain you can verify yourself.",
+  "license": "Apache-2.0",
+  "homepage": "https://www.cartulary.xyz",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prasants/cartulary.git",
+    "directory": "sdk"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@noble/curves": "^1.6.0",
+    "@noble/hashes": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.130",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0"
+  },
+  "keywords": [
+    "stablecoin",
+    "payments",
+    "agents",
+    "usdc",
+    "mandates",
+    "evidence"
+  ]
+}
